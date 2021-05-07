@@ -35,7 +35,6 @@ jobs:
 
       - name: Archive dotnetcore package artifacts
         uses: actions/upload-artifact@v2
-        if: env.NEED_DEPLOY == 'true'
         with:
           name: ${{ env.ARTIFACTS_NAME }}
           path: './apps/dotnetcore/Scm/Adc.Scm.Api/${{ env.DOTNETCORE_PACKAGE_PATH }}/${{ env.DOTNETCORE_PACKAGE_NAME }}'
