@@ -1,3 +1,6 @@
+@description('Name of landing zone resource group')
+param landingZoneResourceGroupName string
+
 @minLength(3)
 @maxLength(8)
 @description('Name of environment')
@@ -17,8 +20,19 @@ var appiName = 'appi-scm-${env}-${uniqueString(resourceGroup().id)}'
 // ServiceBus names
 var sbName = 'sb-scm-${env}-${uniqueString(resourceGroup().id)}'
 var sbtContactsName = 'sbt-contacts'
+// vnet
+var vnetName = 'vnet-scm-${env}-${uniqueString(rgLandingZone.id)}'
+var privateendpointSubnetName = 'snet-workload'
+var privateEndpointName = 'pe-contactsapi-${env}-${uniqueString(resourceGroup().id)}'
+var privateZoneName = 'privatelink.azurewebsites.net'
+var integrationSubnetName = 'snet-appservice-integration'
 
 var location = resourceGroup().location
+
+resource rgLandingZone 'Microsoft.Resources/resourceGroups@2021-01-01' existing = {
+  name: landingZoneResourceGroupName
+  scope: subscription()
+}
 
 resource appi 'Microsoft.Insights/components@2015-05-01' existing = {
   name: appiName
@@ -40,6 +54,25 @@ resource appplan 'Microsoft.Web/serverfarms@2020-12-01' existing = {
   name: planWindowsName
 }
 
+resource vnet 'Microsoft.Network/virtualNetworks@2020-11-01' existing = {
+  name: vnetName
+  scope: resourceGroup(landingZoneResourceGroupName)
+}
+
+resource privateEndpointSubnet 'Microsoft.Network/virtualNetworks/subnets@2020-11-01' existing = {
+  name: '${vnet.name}/${privateendpointSubnetName}'
+  scope: resourceGroup(landingZoneResourceGroupName)
+}
+
+resource integrationSubnet 'Microsoft.Network/virtualNetworks/subnets@2020-11-01' existing = {
+  name: '${vnet.name}/${integrationSubnetName}'
+  scope: resourceGroup(landingZoneResourceGroupName)
+}
+
+resource privateZone 'Microsoft.Network/privateDnsZones@2020-06-01' existing = {
+  name: privateZoneName
+}
+
 resource webapp 'Microsoft.Web/sites@2020-12-01' = {
   name: webAppName
   location: location
@@ -51,6 +84,7 @@ resource webapp 'Microsoft.Web/sites@2020-12-01' = {
     siteConfig: {
       alwaysOn: true
       use32BitWorkerProcess: false
+      vnetName: integrationSubnetName
       cors: {
         allowedOrigins: [
           '*'
@@ -79,6 +113,48 @@ resource webapp 'Microsoft.Web/sites@2020-12-01' = {
           name: 'DefaultConnectionString'
           connectionString: sqlConnectionString
           type: 'SQLAzure'
+        }
+      ]
+    }
+  }
+
+  resource vnetIntegration 'networkConfig@2020-10-01' = {
+    name: 'virtualNetwork'
+    properties: {
+      subnetResourceId: integrationSubnet.id
+    }
+  }
+}
+
+resource privateEndpoint 'Microsoft.Network/privateEndpoints@2020-11-01' = {
+  name: privateEndpointName
+  location: location
+  properties: {
+    privateLinkServiceConnections:[
+      {
+        name: '${privateEndpointName}-${uniqueString(resourceGroup().id)}'
+        properties: {
+          privateLinkServiceId: webapp.id
+          groupIds:[
+            'sites'
+          ]
+        }
+      }
+    ]
+    subnet: {
+      id: privateEndpointSubnet.id
+    }
+  }
+
+  resource privateZoneGroups 'privateDnsZoneGroups@2020-11-01' = {
+    name: 'default'
+    properties: {
+      privateDnsZoneConfigs: [
+        {
+          name: privateZoneName
+          properties: {
+            privateDnsZoneId: privateZone.id
+          }
         }
       ]
     }

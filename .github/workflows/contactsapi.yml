@@ -1,0 +1,66 @@
+name: Contacts API
+
+on:
+  workflow_dispatch:
+    
+jobs:
+
+  build:
+    runs-on: ubuntu-latest
+    env:
+      DOTNETCORE_PACKAGE_PATH: 'publish/scmcontactsapi'
+      DOTNETCORE_PACKAGE_NAME: 'scmcontactsapi.zip'
+      ARTIFACTS_NAME: 'scmcontactsapi'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Setup .NET Core
+        uses: actions/setup-dotnet@v1
+        with:
+          dotnet-version: 3.1.x
+
+      - name: Build and publish SCM ContactsAPI
+        working-directory: ./apps/dotnetcore/Scm/Adc.Scm.Api
+        run: |
+          dotnet restore
+          dotnet build --configuration Release
+          dotnet publish -c Release -o './${{ env.DOTNETCORE_PACKAGE_PATH }}'
+
+      - name: Zip SCM ContactsAPI
+        working-directory: ./apps/dotnetcore/Scm/Adc.Scm.Api/${{ env.DOTNETCORE_PACKAGE_PATH }}
+        run: |
+          zip -r ${{ env.DOTNETCORE_PACKAGE_NAME }} ./*
+
+      - name: Archive dotnetcore package artifacts
+        uses: actions/upload-artifact@v2
+        if: env.NEED_DEPLOY == 'true'
+        with:
+          name: ${{ env.ARTIFACTS_NAME }}
+          path: './apps/dotnetcore/Scm/Adc.Scm.Api/${{ env.DOTNETCORE_PACKAGE_PATH }}/${{ env.DOTNETCORE_PACKAGE_NAME }}'
+          retention-days: 30
+
+  deploy:
+    runs-on: [self-hosted, linux, scmdev-runner]
+    needs: build
+    env:
+      DOTNETCORE_PACKAGE_NAME: 'scmcontactsapi.zip'
+      ARTIFACTS_NAME: 'scmcontactsapi'
+
+    steps:
+      - name: Login via Azure CLI
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Download scmcontactsapi artifacts
+        uses: actions/download-artifact@v2
+        with:
+          name: ${{ env.ARTIFACTS_NAME }}
+
+      - name: Deploy SCM Contacts API
+        uses: azure/webapps-deploy@v2
+        with:
+          app-name: app-contactsapi-dev-onzab2bhyqrzs
+          package: ./${{ env.DOTNETCORE_PACKAGE_NAME }}

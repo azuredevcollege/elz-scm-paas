@@ -1,3 +1,6 @@
+@description('Name of landing zone resource group')
+param landingZoneResourceGroupName string
+
 @minLength(3)
 @maxLength(8)
 @description('Name of environment')
@@ -23,6 +26,7 @@ module database 'databases.bicep' = {
     resourceTag: resourceTag
     sqlUserName: sqlUserName
     sqlUserPwd: sqlUserPwd
+    landingZoneResourceGroupName: landingZoneResourceGroupName
   }
 }
 
@@ -32,6 +36,7 @@ module webapp 'webapp.bicep' = {
     env: env
     resourceTag: resourceTag
     sqlConnectionString: database.outputs.connectionString
+    landingZoneResourceGroupName: landingZoneResourceGroupName
   }
 }
 

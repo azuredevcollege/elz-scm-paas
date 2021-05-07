@@ -4,7 +4,7 @@
 param env string = 'dev'
 
 var pipName = 'pip-scm-${env}-${uniqueString(resourceGroup().id)}'
-var domainLabelName = 'scm-elz-${env}'
+var domainLabelName = 'scm-${env}'
 var location = resourceGroup().location
 
 

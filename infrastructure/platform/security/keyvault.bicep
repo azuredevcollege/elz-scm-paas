@@ -18,6 +18,7 @@ resource kv 'Microsoft.KeyVault/vaults@2021-04-01-preview' = {
       family: 'A'
       name: 'standard'
     }
+    enableSoftDelete: false
     tenantId: tenantId
     accessPolicies:[
       {

@@ -21,8 +21,8 @@ resource sb 'Microsoft.ServiceBus/namespaces@2017-04-01' = {
   location: location
   tags: resourceTag
   sku: {
-    name: 'Standard'
-    tier:'Standard'
+    name: 'Premium'
+    tier:'Premium'
   }
   // Thumbnail Queue
   resource sbqThumbnails 'queues@2017-04-01' = {

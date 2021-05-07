@@ -7,7 +7,7 @@ param landingZoneResourceGroupName string
 param env string = 'dev'
 
 var vnetName = 'vnet-scm-${env}-${uniqueString(rgLandingZone.id)}'
-var privateZoneName = 'privatelink.azurewebsites.net'
+var privateZoneName = 'privatelink.databases.windows.net'
 var location = resourceGroup().location
 
 resource rgLandingZone 'Microsoft.Resources/resourceGroups@2021-01-01' existing = {
